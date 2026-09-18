@@ -1,0 +1,6 @@
+.env
+.env.*
+__pycache__/
+page.md
+chunks.jsonl
+docs-sample/

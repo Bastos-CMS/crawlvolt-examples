@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, follow">
+    <title>JavaScript rendering demo - CrawlVolt</title>
+    <style>body{font:18px/1.6 system-ui,sans-serif;max-width:42rem;margin:4rem auto;padding:0 1.5rem;color:#20242c;background:#fafaf7}a{color:#195d42}h1{line-height:1.15}button{font:inherit;min-height:48px;padding:.6rem 1.2rem;cursor:pointer;background:#195d42;color:white;border:0;border-radius:8px}#result{padding:1.5rem 0}</style>
+  </head>
+  <body>
+    <main>
+      <p>CrawlVolt / Browser action fixture</p>
+      <h1>Content that appears after a click.</h1>
+      <p>This controlled demo waits 350 milliseconds before adding its result to the document.</p>
+      <button id="load-details" type="button">Load details</button>
+      <section id="result" aria-live="polite" aria-label="Loaded details"></section>
+      <noscript>Enable JavaScript to run this demo.</noscript>
+    </main>
+    <a href="/blog/scrape-javascript-rendered-pages">Read the browser actions guide</a>
+    <script>
+      document.getElementById('load-details').addEventListener('click', (event) => {
+        event.currentTarget.disabled = true;
+        setTimeout(() => {
+          const result = document.getElementById('result');
+          result.textContent = 'Ready for collection: 42 items.';
+          result.dataset.ready = 'true';
+        }, 350);
+      });
+    </script>
+  </body>
+</html>

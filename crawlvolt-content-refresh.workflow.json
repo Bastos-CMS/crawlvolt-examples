@@ -1,0 +1,207 @@
+{
+  "name": "CrawlVolt - Daily content change check",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-preview",
+      "name": "Manual preview",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        180,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "daily-trigger",
+      "name": "Daily at 09:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { source_url: \"https://example.com\" } }];"
+      },
+      "id": "page-settings",
+      "name": "Page settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.crawlvolt.com/v1/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{$execution.id}}-refresh-page"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $json.source_url, formats: [\"markdown\"], only_main_content: true, cache_ttl_secs: 0 }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "refresh-page",
+      "name": "Extract Markdown",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const result = $input.first().json;\nconst markdown = result.outputs?.markdown;\nif (typeof markdown !== 'string' || !markdown.trim()) {\n  throw new Error('No Markdown returned. The previous hash will be preserved.');\n}\nconst sourceUrl = $('Page settings').first().json.source_url;\nreturn [{ json: { source_url: sourceUrl, markdown } }];\n"
+      },
+      "id": "validate-markdown",
+      "name": "Validate Markdown",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hash",
+        "binaryData": false,
+        "type": "SHA256",
+        "value": "={{ $json.markdown }}",
+        "dataPropertyName": "hash",
+        "encoding": "hex"
+      },
+      "id": "hash-markdown",
+      "name": "Hash Markdown",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first().json;\nif (typeof item.hash !== 'string' || !/^[a-f0-9]{64}$/.test(item.hash)) {\n  throw new Error('Expected a SHA-256 hash from the Crypto node.');\n}\nif ($execution.mode !== 'production') {\n  return [{ json: { ...item, change: 'preview', needs_update: false,\n    note: 'Manual preview: static data is not persisted. Use a published scheduled execution to verify changes.' } }];\n}\nconst state = $getWorkflowStaticData('global');\nstate.pages ??= {};\nconst previous = state.pages[item.source_url];\nconst change = !previous ? 'baseline' : previous.hash === item.hash ? 'unchanged' : 'changed';\nstate.pages[item.source_url] = { hash: item.hash };\nreturn [{ json: { ...item, change, needs_update: change !== 'unchanged' } }];\n"
+      },
+      "id": "compare-content",
+      "name": "Compare content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        280
+      ]
+    }
+  ],
+  "connections": {
+    "Manual preview": {
+      "main": [
+        [
+          {
+            "node": "Page settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily at 09:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Page settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page settings": {
+      "main": [
+        [
+          {
+            "node": "Extract Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Markdown": {
+      "main": [
+        [
+          {
+            "node": "Validate Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Markdown": {
+      "main": [
+        [
+          {
+            "node": "Hash Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hash Markdown": {
+      "main": [
+        [
+          {
+            "node": "Compare content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  },
+  "active": false
+}
