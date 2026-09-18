@@ -2,6 +2,13 @@
 
 Small Python, Node.js and n8n examples for turning web pages into Markdown and preparing content for a retrieval pipeline. These are the downloadable examples from the [CrawlVolt guides](https://www.crawlvolt.com/blog?utm_source=github&utm_medium=referral&utm_campaign=first_users_202609&utm_content=examples).
 
+## Get the examples
+
+```bash
+git clone https://github.com/Bastos-CMS/crawlvolt-examples.git
+cd crawlvolt-examples
+```
+
 ## Try the local RAG example first
 
 This command needs Node.js 20+ and no API key, network request or package install:
